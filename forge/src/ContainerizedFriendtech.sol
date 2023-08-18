@@ -4,7 +4,7 @@ pragma solidity >=0.8.2 <0.9.0;
 
 import "@openzeppelin/access/Ownable.sol";
 
-contract FriendtechSharesV1 is Ownable {
+contract ContainerizedFriendtech is Ownable {
     address public protocolFeeDestination;
     uint256 public protocolFeePercent;
     uint256 public subjectFeePercent;
