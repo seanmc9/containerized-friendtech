@@ -12,7 +12,8 @@ contract ContainerizedFriendtechTest is Test {
     ContainerizedFriendtech public containerizedFriendtech;
 
     function setUp() public {
-        containerizedFriendtech = new ContainerizedFriendtech(PROTOCOL_FEE_DESTINATION, PROTOCOL_FEE_PERCENT, SUBJECT_FEE_PERCENT);
+        containerizedFriendtech =
+            new ContainerizedFriendtech(PROTOCOL_FEE_DESTINATION, PROTOCOL_FEE_PERCENT, SUBJECT_FEE_PERCENT);
     }
 
     function testProtocolFeeDestination() public {
