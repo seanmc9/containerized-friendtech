@@ -5,17 +5,15 @@ pragma solidity >=0.8.2 <0.9.0;
 import "@openzeppelin/access/Ownable.sol";
 
 contract ContainerizedFriendtech is Ownable {
+    uint256 public sharesSupply;
     address public protocolFeeDestination;
     uint256 public protocolFeePercent;
     uint256 public subjectFeePercent;
 
-    event Trade(address trader, address subject, bool isBuy, uint256 shareAmount, uint256 ethAmount, uint256 protocolEthAmount, uint256 subjectEthAmount, uint256 supply);
+    event Trade(address trader, bool isBuy, uint256 shareAmount, uint256 ethAmount, uint256 protocolEthAmount, uint256 subjectEthAmount, uint256 supply);
 
-    // SharesSubject => (Holder => Balance)
-    mapping(address => mapping(address => uint256)) public sharesBalance;
-
-    // SharesSubject => Supply
-    mapping(address => uint256) public sharesSupply;
+    // Holder => Balance
+    mapping(address => uint256) public sharesBalance;
 
     function setFeeDestination(address _feeDestination) public onlyOwner {
         protocolFeeDestination = _feeDestination;
@@ -36,56 +34,56 @@ contract ContainerizedFriendtech is Ownable {
         return summation * 1 ether / 16000;
     }
 
-    function getBuyPrice(address sharesSubject, uint256 amount) public view returns (uint256) {
-        return getPrice(sharesSupply[sharesSubject], amount);
+    function getBuyPrice(uint256 amount) public view returns (uint256) {
+        return getPrice(sharesSupply, amount);
     }
 
-    function getSellPrice(address sharesSubject, uint256 amount) public view returns (uint256) {
-        return getPrice(sharesSupply[sharesSubject] - amount, amount);
+    function getSellPrice(uint256 amount) public view returns (uint256) {
+        return getPrice(sharesSupply - amount, amount);
     }
 
-    function getBuyPriceAfterFee(address sharesSubject, uint256 amount) public view returns (uint256) {
-        uint256 price = getBuyPrice(sharesSubject, amount);
+    function getBuyPriceAfterFee(uint256 amount) public view returns (uint256) {
+        uint256 price = getBuyPrice(amount);
         uint256 protocolFee = price * protocolFeePercent / 1 ether;
         uint256 subjectFee = price * subjectFeePercent / 1 ether;
         return price + protocolFee + subjectFee;
     }
 
-    function getSellPriceAfterFee(address sharesSubject, uint256 amount) public view returns (uint256) {
-        uint256 price = getSellPrice(sharesSubject, amount);
+    function getSellPriceAfterFee(uint256 amount) public view returns (uint256) {
+        uint256 price = getSellPrice(amount);
         uint256 protocolFee = price * protocolFeePercent / 1 ether;
         uint256 subjectFee = price * subjectFeePercent / 1 ether;
         return price - protocolFee - subjectFee;
     }
 
-    function buyShares(address sharesSubject, uint256 amount) public payable {
-        uint256 supply = sharesSupply[sharesSubject];
-        require(supply > 0 || sharesSubject == msg.sender, "Only the shares' subject can buy the first share");
-        uint256 price = getPrice(supply, amount);
+    function buyShares(uint256 amount) public payable {
+        
+        require(sharesSupply > 0 || owner() == msg.sender, "Only the account owner can buy the first share");
+        uint256 price = getPrice(sharesSupply, amount);
         uint256 protocolFee = price * protocolFeePercent / 1 ether;
         uint256 subjectFee = price * subjectFeePercent / 1 ether;
         require(msg.value >= price + protocolFee + subjectFee, "Insufficient payment");
-        sharesBalance[sharesSubject][msg.sender] = sharesBalance[sharesSubject][msg.sender] + amount;
-        sharesSupply[sharesSubject] = supply + amount;
-        emit Trade(msg.sender, sharesSubject, true, amount, price, protocolFee, subjectFee, supply + amount);
+        sharesBalance[msg.sender] = sharesBalance[msg.sender] + amount;
+        sharesSupply = sharesSupply + amount;
+        emit Trade(msg.sender, true, amount, price, protocolFee, subjectFee, sharesSupply + amount);
         (bool success1, ) = protocolFeeDestination.call{value: protocolFee}("");
-        (bool success2, ) = sharesSubject.call{value: subjectFee}("");
+        (bool success2, ) = payable(owner()).call{value: subjectFee}("");
         require(success1 && success2, "Unable to send funds");
     }
 
-    function sellShares(address sharesSubject, uint256 amount) public payable {
-        uint256 supply = sharesSupply[sharesSubject];
-        require(supply > amount, "Cannot sell the last share");
-        uint256 price = getPrice(supply - amount, amount);
+    function sellShares(uint256 amount) public payable {
+        
+        require(sharesSupply > amount, "Cannot sell the last share");
+        uint256 price = getPrice(sharesSupply - amount, amount);
         uint256 protocolFee = price * protocolFeePercent / 1 ether;
         uint256 subjectFee = price * subjectFeePercent / 1 ether;
-        require(sharesBalance[sharesSubject][msg.sender] >= amount, "Insufficient shares");
-        sharesBalance[sharesSubject][msg.sender] = sharesBalance[sharesSubject][msg.sender] - amount;
-        sharesSupply[sharesSubject] = supply - amount;
-        emit Trade(msg.sender, sharesSubject, false, amount, price, protocolFee, subjectFee, supply - amount);
+        require(sharesBalance[msg.sender] >= amount, "Insufficient shares");
+        sharesBalance[msg.sender] = sharesBalance[msg.sender] - amount;
+        sharesSupply = sharesSupply - amount;
+        emit Trade(msg.sender, false, amount, price, protocolFee, subjectFee, sharesSupply - amount);
         (bool success1, ) = msg.sender.call{value: price - protocolFee - subjectFee}("");
         (bool success2, ) = protocolFeeDestination.call{value: protocolFee}("");
-        (bool success3, ) = sharesSubject.call{value: subjectFee}("");
+        (bool success3, ) = payable(owner()).call{value: subjectFee}("");
         require(success1 && success2 && success3, "Unable to send funds");
     }
 }
