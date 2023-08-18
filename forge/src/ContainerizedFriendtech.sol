@@ -5,22 +5,25 @@ pragma solidity >=0.8.2 <0.9.0;
 import "@openzeppelin/access/Ownable.sol";
 
 contract ContainerizedFriendtech is Ownable {
-    uint256 public sharesSupply;
     address public protocolFeeDestination;
     uint256 public protocolFeePercent;
     uint256 public subjectFeePercent;
+
+    uint256 public sharesSupply;
 
     event Trade(address trader, bool isBuy, uint256 shareAmount, uint256 ethAmount, uint256 protocolEthAmount, uint256 subjectEthAmount, uint256 supply);
 
     // Holder => Balance
     mapping(address => uint256) public sharesBalance;
 
-    function setFeeDestination(address _feeDestination) public onlyOwner {
-        protocolFeeDestination = _feeDestination;
-    }
-
-    function setProtocolFeePercent(uint256 _feePercent) public onlyOwner {
-        protocolFeePercent = _feePercent;
+    /**
+     * @dev Sets the values for {protocolFeeDestination}, {protocolFeePercent}, and {subjectFeePercent}
+     */
+    constructor(address protocolFeeDestination_, uint256 protocolFeePercent_, uint256 subjectFeePercent_)
+    {
+        protocolFeeDestination = protocolFeeDestination_;  // immutable once set
+        protocolFeePercent = protocolFeePercent_;  // immutable once set
+        subjectFeePercent = subjectFeePercent_;
     }
 
     function setSubjectFeePercent(uint256 _feePercent) public onlyOwner {
